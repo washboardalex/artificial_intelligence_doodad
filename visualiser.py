@@ -1,7 +1,7 @@
 import sys
 import math
 import tkinter as tk
-from support.problem_spec import ProblemSpec
+from problem_spec import ProblemSpec
 from tester import load_output
 # from tester import *
 

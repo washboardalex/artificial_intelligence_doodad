@@ -1,5 +1,5 @@
 import math
-from support.angle import Angle
+from angle import Angle
 
 
 class RobotConfig:

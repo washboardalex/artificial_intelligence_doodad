@@ -1,14 +1,8 @@
 import sys
-import math
-import random
 
-from support.problem_spec import ProblemSpec
-from support.robot_config import make_robot_config_from_ee1, make_robot_config_from_ee2, write_robot_config_list_to_file
-from support.angle import Angle
-from support.obstacle import Obstacle
-from tester import test_environment_bounds, test_angle_constraints, test_length_constraints, test_self_collision, \
-    test_obstacle_collision, test_line_collision, test_bounding_box, test_config_equality, point_is_close
-from visualiser import Visualiser
+from problem_spec import ProblemSpec
+from robot_config import write_robot_config_list_to_file
+from tester import test_config_equality
 
 """
 Template file for you to implement your solution to Assignment 2. Contains a class you can use to represent graph nodes,

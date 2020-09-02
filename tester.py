@@ -1,10 +1,10 @@
 import sys
 import os.path
 import math
-from support.robot_config import RobotConfig, make_robot_config_from_ee1
-from support.problem_spec import ProblemSpec
-from support.obstacle import Obstacle
-from support.angle import Angle
+from robot_config import RobotConfig, make_robot_config_from_ee1
+from problem_spec import ProblemSpec
+from obstacle import Obstacle
+from angle import Angle
 
 """
 Tester script.

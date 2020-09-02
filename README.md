@@ -4,25 +4,25 @@ This is the support code for COMP3702 2020 Assignment 2.
 
 The following files are provided:
 
-**support/problem_spec.py**
+**problem_spec.py**
 
 This file contains the `ProblemSpec` class. This class can be used to represent the environment your agent operates in. The constructor for this class takes the filename of the input file as an argument, and handles parsing of the input file. The properties of the environment are stored as class variables within the `ProblemSpec` instance which can be accessed by your code.
 
 Refer to the documentation at the start of this file for more details.
 
-**support/robot_config.py**
+**robot_config.py**
 
 This file contains the `RobotConfig` class. This class represents a particular configuration (state) the robot can be in. There are 2 helper methods which can be used to generate sample configurations using the reference frame of either EE1 or EE2. Additionally, this file provides a method for writing a solution (i.e. a list of `RobotConfig` objects forming a path) to an output file.
 
 Refer to the documentation at the start of this file for more details.
 
-**support/obstacle.py**
+**obstacle.py**
 
 This file contains the `Obstacle` class, a simple class representing a rectangular obstacle.
 
 Refer to the documentation at the start of this file for more details.
 
-**support/angle.py**
+**angle.py**
 
 This file contains the `Angle` class, representing an angle. This class behaves like a normal floating point number, supporting addition, subtraction, multiplication by scalar, division by scalar, negation, equality and comparison. Constructor accepts degrees or radians, and value can be accessed as degrees or radians. Automatically keeps value in the range of -pi and pi.
 
@@ -48,6 +48,9 @@ Refer to the documentation at the start of this file for more details.
 
 Example input files for you to test your solver on. You should make sure that your solver is able to produce valid solution files (verified by `tester.py`) for these inputs.
 
+**solver.py**
+
+A template for you to write your solution. To make sure your code is graded correctly, do not rename this file.
 
 
 
