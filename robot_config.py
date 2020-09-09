@@ -114,46 +114,6 @@ def make_robot_config_from_ee2(x, y, angles, lengths, ee1_grappled=False, ee2_gr
     return RobotConfig(lengths, ee2x=x, ee2y=y, ee2_angles=angles, ee1_grappled=ee1_grappled, ee2_grappled=ee2_grappled)
 
 
-def make_robot_config_from_ee1_double(x, y, angles, lengths):
-    return RobotConfig(lengths, ee1x=x, ee1y=y, ee1_angles=angles, ee1_grappled=True, ee2_grappled=True)
-
-
-def make_robot_config_from_ee2_double(x, y, angles, lengths):
-    return RobotConfig(lengths, ee2x=x, ee2y=y, ee2_angles=angles, ee1_grappled=True, ee2_grappled=True)
-
-
-def make_ee1_duplicate(rc):
-    x, y = rc.points[-1]
-    angles = rc.ee2_angles
-    lengths = rc.lengths[:]
-    lengths.reverse()
-    return RobotConfig(lengths, ee1x=x, ee1y=y, ee1_angles=angles, ee1_grappled=True)
-
-
-def make_ee1_duplicate_bridge(rc):
-    x, y = rc.points[-1]
-    angles = rc.ee2_angles
-    lengths = rc.lengths[:]
-    lengths.reverse()
-    return RobotConfig(lengths, ee1x=x, ee1y=y, ee1_angles=angles, ee1_grappled=True, ee2_grappled=True)
-
-
-def make_ee2_duplicate(rc):
-    x, y = rc.points[0]
-    angles = rc.ee1_angles
-    lengths = rc.lengths[:]
-    lengths.reverse()
-    return RobotConfig(lengths, ee2x=x, ee2y=y, ee2_angles=angles, ee2_grappled=True)
-
-
-def make_ee2_duplicate_bridge(rc):
-    x, y = rc.points[0]
-    angles = rc.ee1_angles
-    lengths = rc.lengths[:]
-    lengths.reverse()
-    return RobotConfig(lengths, ee2x=x, ee2y=y, ee2_angles=angles, ee1_grappled=True, ee2_grappled=True)
-
-
 def write_robot_config_list_to_file(filename, robot_config_list):
     """
     Write an output file for the given list of RobotConfigs. We recommend using this method to generate your output
