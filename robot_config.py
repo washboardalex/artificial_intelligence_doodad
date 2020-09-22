@@ -36,6 +36,8 @@ class RobotConfig:
             self.ee2_angles = [math.pi + net_angle] + \
                               [-ee1_angles[i] for i in range(len(ee1_angles) - 1, 0, -1)]
             self.points = points
+            self.edges = [(self.points[i], self.points[i + 1]) for i in range((len(lengths)))]
+
 
         elif ee2x is not None and ee2y is not None and ee2_angles is not None:
             points = [(ee2x, ee2y)]
@@ -52,6 +54,8 @@ class RobotConfig:
                               [-ee2_angles[i] for i in range(len(ee2_angles) - 1, 0, -1)]
             self.ee2_angles = ee2_angles
             self.points = points
+            self.edges = [(self.points[i], self.points[i + 1]) for i in range((len(lengths)))]
+            
 
         else:
             raise Exception("Could not create RobotConfig - Insufficient information given")
