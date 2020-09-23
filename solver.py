@@ -74,7 +74,10 @@ def find_graph_path(spec, init_node):
     # here, each key is a graph node, each value is the list of configs visited on the path to the graph node
     init_visited = {init_node: [init_node.config]}
 
+    index = 0
     while len(init_container) > 0:
+        if index % 100 == 0:
+            print("searching...")
         current = init_container.pop(0)
 
         if test_config_equality(current.config, spec.goal, spec):
@@ -86,6 +89,8 @@ def find_graph_path(spec, init_node):
             if suc not in init_visited:
                 init_container.append(suc)
                 init_visited[suc] = init_visited[current] + [suc.config]
+        
+        index += 1
 
     return None
 
@@ -176,17 +181,17 @@ def edges_intersect(edge1, edge2):
 
     return False
 
-def is_step_collision(step, spec):
+def is_step_collision(spec, config):
     """
     Determines whether the configuration of the robot provided to the function results in a collision with the edge of the workspace or any of the obstacles on the part of the segments.
 
     :param spec: ProblemSpec object
-    :param step: RobotConfig object
+    :param config: RobotConfig object
     :return: boolean representing whether the robot configuration results in a collision or not
     """
     for obstacle in spec.obstacles:
         for obstacle_edge in obstacle.edges:
-            for segment_edge in step.edges:
+            for segment_edge in config.edges:
                 if edges_intersect(obstacle_edge, segment_edge):
                     return True
     return False
@@ -206,13 +211,14 @@ def is_lengths_close(lengths1, lengths2):
     return True
 
 def main(arglist):
-
-    print("Here we go!", arglist[0], arglist[1])
+    print("script begun")
 
     input_file = arglist[0]
     output_file = arglist[1]
 
     spec = ProblemSpec(input_file)
+
+    print("spec loaded")
 
     init_node = GraphNode(spec, spec.initial)
     goal_node = GraphNode(spec, spec.goal)
@@ -226,28 +232,37 @@ def main(arglist):
 
     # Check if the beginning and ending lengths are the same. If they are, then do one algorithm, if not do another thing
 
+    print("commencing external path")
+
     isPathFound = False
     while isPathFound is False:
+        print("collecting nodes for graph")
         n = 0
-        while n < 10000:
+        while n < 5000:
+            if n % 290 == 0: 
+                print(n, "nodes collected for graph")
             config = generate_sample(spec)
             # check if the configuration is a collision
             # if not then append.
-            if not is_step_collision(config, spec):
+            if not is_step_collision(spec, config):
                 new_node = GraphNode(spec, config)
                 # if some distance condition is satisfied, based on config, add neighbours to newnode
                 for node in graph_nodes:
                     node_angles, new_node_angles, node_lengths, new_node_lengths = node.config.ee1_angles, new_node.config.ee1_angles, node.config.lengths, new_node.config.lengths
                     if is_angles_close(node_angles, new_node_angles) and is_lengths_close(node_lengths, new_node_lengths):
-                        new_node.neighbors.append(node)
+                        # node.neighbors.append(node)
+                        GraphNode.add_connection(node, new_node)
                 graph_nodes.append(new_node)
-                print("check that sometimes there are neighbours: ", new_node.neighbors)
                 n += 1
-        
+        print("check that graph nodes are in array: ", len(graph_nodes))
+        print("number of neighbours on init_node: ", len(init_node.neighbors))
+        path = find_graph_path(spec, init_node)
+        if path is not None:
+            isPathFound = True
+            steps = path
         # call provided graph search function (can improve later) - if you get a solution....
         #interpolate path
         #AND DATS DAT!
-        isPathFound = True
 
 
 
