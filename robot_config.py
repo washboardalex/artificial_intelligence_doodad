@@ -89,7 +89,6 @@ class RobotConfig:
         """
         return self.points[-1]
 
-
 def make_robot_config_from_ee1(x, y, angles, lengths, ee1_grappled=False, ee2_grappled=False):
     """
     Create a robot configuration from the position of end effector 1, with angles relative to end effector 1.

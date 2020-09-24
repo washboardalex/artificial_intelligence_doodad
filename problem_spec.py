@@ -110,10 +110,6 @@ class ProblemSpec:
                 sys.exit(1)
         self.obstacles = obstacles
 
-        print("Initial node is: ", self.initial)
-        print("Goal node is : ", self.goal)
-        print("Orders: position of grabber; angles in degrees; lengths of rods")
-
 def next_valid_line(f):
     # skip comments and empty lines, return None on EOF
     while True:

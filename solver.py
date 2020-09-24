@@ -74,10 +74,7 @@ def find_graph_path(spec, init_node):
     # here, each key is a graph node, each value is the list of configs visited on the path to the graph node
     init_visited = {init_node: [init_node.config]}
 
-    index = 0
     while len(init_container) > 0:
-        if index % 100 == 0:
-            print("searching...")
         current = init_container.pop(0)
 
         if test_config_equality(current.config, spec.goal, spec):
@@ -89,8 +86,6 @@ def find_graph_path(spec, init_node):
             if suc not in init_visited:
                 init_container.append(suc)
                 init_visited[suc] = init_visited[current] + [suc.config]
-        
-        index += 1
 
     return None
 
@@ -197,6 +192,12 @@ def is_step_collision(spec, config):
     return False
 
 def is_angles_close(angles1, angles2):
+    """
+    Determines whether two angles are close for the purpose of connecting them in the state graph, returning a boolean value. This function does NOT obey the tolerance rule
+
+    :param angles1: array of Angle objects
+    :param angles2: array of Angle objects
+    """
     num_angles = len(angles1)
     for i in range(num_angles):
         if abs(angles1[i].in_radians() - angles2[i].in_radians()) > 0.25: # picked somewhat arbitrarily, can fine-tune
@@ -204,21 +205,61 @@ def is_angles_close(angles1, angles2):
     return True
 
 def is_lengths_close(lengths1, lengths2):
+    """
+    Determines whether two lengths are close for the purpose of connecting them in the state graph, returning a boolean value. This function does NOT obey the tolerance rule
+
+    :param lengths1: array of floats
+    :param lengths2: array of floats
+    """
     num_lengths = len(lengths1)
     for i in range(num_lengths):
         if abs(lengths1[i] - lengths2[i]) > 0.1: # picked somewhat arbitrarily, can fine-tune
             return False
     return True
 
-def main(arglist):
-    print("script begun")
+def vals_within_tolerance(current, goal, tolerance):
+    num_vals = len(current)
+    for i in range(num_vals):
+        if current[i] - goal[i] > tolerance or current[i] - goal[i] < -tolerance:
+            return False
+    return True
 
+def generate_new_vals(current, goal, tolerance):
+    num_els = len(current)
+    new_vals = []
+    for i in range(num_els):
+        if current[i] - goal[i] > tolerance or current[i] - goal[i] < -tolerance:
+            new_vals.append(current[i] + tolerance)
+        else:
+            new_vals.append(current[i])
+    return new_vals
+
+#might refactor this into recursive pathfind or somesuch
+# needs collision checking
+def interpolate_path(spec, start, end): 
+    primitive_step = 1e-3 #remove this once you update the spec to original value
+    interpolated_path = [start]
+    
+    #designate an index
+    is_angles_in_tolerance = vals_within_tolerance(start.ee1_angles, end.ee1_angles, primitive_step)
+    is_lengths_in_tolerance = vals_within_tolerance(start.lengths, end.lengths, primitive_step)
+    
+    while not is_angles_in_tolerance or not is_lengths_in_tolerance:
+        new_angles = generate_new_vals(interpolated_path[-1].ee1_angles, end.ee1_angles, primitive_step)
+        new_lengths = generate_new_vals(interpolated_path[-1].lengths, end.lengths, primitive_step)
+        new_config = make_robot_config_from_ee1(spec.grapple_points[0][0], spec.grapple_points[0][1], new_angles, new_lengths, ee1_grappled = True)
+        interpolated_path.append(new_config)
+        is_angles_in_tolerance = vals_within_tolerance(new_config.ee1_angles, end.ee1_angles, primitive_step)
+        is_lengths_in_tolerance = vals_within_tolerance(new_config.lengths, end.lengths, primitive_step)
+        break
+    return interpolated_path
+
+
+def main(arglist):
     input_file = arglist[0]
     output_file = arglist[1]
 
     spec = ProblemSpec(input_file)
-
-    print("spec loaded")
 
     init_node = GraphNode(spec, spec.initial)
     goal_node = GraphNode(spec, spec.goal)
@@ -232,15 +273,10 @@ def main(arglist):
 
     # Check if the beginning and ending lengths are the same. If they are, then do one algorithm, if not do another thing
 
-    print("commencing external path")
-
     isPathFound = False
     while isPathFound is False:
-        print("collecting nodes for graph")
         n = 0
         while n < 5000:
-            if n % 290 == 0: 
-                print(n, "nodes collected for graph")
             config = generate_sample(spec)
             # check if the configuration is a collision
             # if not then append.
@@ -250,21 +286,27 @@ def main(arglist):
                 for node in graph_nodes:
                     node_angles, new_node_angles, node_lengths, new_node_lengths = node.config.ee1_angles, new_node.config.ee1_angles, node.config.lengths, new_node.config.lengths
                     if is_angles_close(node_angles, new_node_angles) and is_lengths_close(node_lengths, new_node_lengths):
-                        # node.neighbors.append(node)
                         GraphNode.add_connection(node, new_node)
                 graph_nodes.append(new_node)
                 n += 1
-        print("check that graph nodes are in array: ", len(graph_nodes))
-        print("number of neighbours on init_node: ", len(init_node.neighbors))
         path = find_graph_path(spec, init_node)
         if path is not None:
             isPathFound = True
             steps = path
+
+        # need a for loop here - interpolate path at each step
+        # then youll need to add some collision checking
+        num_steps = len(steps)
+        interpolated_path = []
+        for i in range(num_steps - 1):
+            new_path_segment = interpolate_path(spec, steps[i], steps[i+1])
+            #if array empty is path found is false
+            interpolated_path.extend(new_path_segment)
+        interpolated_path.append(steps[-1])
+        steps = interpolated_path
         # call provided graph search function (can improve later) - if you get a solution....
         #interpolate path
         #AND DATS DAT!
-
-
 
     if len(arglist) > 1:
         write_robot_config_list_to_file(output_file, steps)
