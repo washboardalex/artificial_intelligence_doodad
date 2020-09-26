@@ -303,16 +303,16 @@ def main(arglist):
             isPathFound = True
             steps = path
 
+        # First, do a round of simple linear interpolation in C-Space
         num_steps = len(steps)
         interpolated_path = []
         for i in range(num_steps - 1):
             new_path_segment = interpolate_path(spec, steps[i], steps[i+1])
-            # if new_path_segment == []:
-            #     print("Collision!")
-                #need to deal with this
             interpolated_path.extend(new_path_segment)
         interpolated_path.append(steps[-1])
         steps = interpolated_path
+
+        # Then, wherever collisions exist, linearly call  
 
 
     if len(arglist) > 1:
