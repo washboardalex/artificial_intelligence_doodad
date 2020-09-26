@@ -189,9 +189,17 @@ def is_step_collision(spec, config):
             for segment_edge in config.edges:
                 if edges_intersect(obstacle_edge, segment_edge):
                     return True
+
+    workspace_edges = [((0,0),(0,1)), ((0,1),(1,1)), ((1,1), (1,0)), ((1,0), (0,0))]
+
+    for workspace_edge in workspace_edges:
+        for segment_edge in config.edges:
+            if edges_intersect(workspace_edge, segment_edge):
+                return True
+                
     return False
 
-def is_angles_close(angles1, angles2):
+def is_connect_angles(angles1, angles2):
     """
     Determines whether two angles are close for the purpose of connecting them in the state graph, returning a boolean value. This function does NOT obey the tolerance rule
 
@@ -204,7 +212,7 @@ def is_angles_close(angles1, angles2):
             return False
     return True
 
-def is_lengths_close(lengths1, lengths2):
+def is_connect_lengths(lengths1, lengths2):
     """
     Determines whether two lengths are close for the purpose of connecting them in the state graph, returning a boolean value. This function does NOT obey the tolerance rule
 
@@ -222,6 +230,33 @@ def vals_within_tolerance(current, goal, tolerance):
     for i in range(num_vals):
         if current[i] - goal[i] > tolerance or current[i] - goal[i] < -tolerance:
             return False
+    return True
+
+# The above function was bugging out so I used this from tester. Figure out the bug and use 
+# your own code, which I always prefer, if you have time.
+def test_config_distance(c1, c2, spec):
+    """
+    Check that the maximum distance between configurations is less than one step.
+    :return: True if less than one primitive step apart, false otherwise
+    """
+    max_ee1_delta = 0
+    max_ee2_delta = 0
+    for i in range(spec.num_segments):
+        if abs((c2.ee1_angles[i] - c1.ee1_angles[i]).in_radians()) > max_ee1_delta:
+            max_ee1_delta = abs((c2.ee1_angles[i] - c1.ee1_angles[i]).in_radians())
+
+        if abs((c2.ee2_angles[i] - c1.ee2_angles[i]).in_radians()) > max_ee2_delta:
+            max_ee2_delta = abs((c2.ee2_angles[i] - c1.ee2_angles[i]).in_radians())
+
+    # measure leniently - allow compliance from EE1 or EE2
+    max_delta = min(max_ee1_delta, max_ee2_delta)
+
+    for i in range(spec.num_segments):
+        if abs(c2.lengths[i] - c1.lengths[i]) > max_delta:
+            max_delta = abs(c2.lengths[i] - c1.lengths[i])
+
+    if max_delta > spec.PRIMITIVE_STEP + spec.TOLERANCE:
+        return False
     return True
 
 def generate_new_vals(current, goal, tolerance):
@@ -262,6 +297,19 @@ def interpolate_path(spec, start, end):
         is_lengths_in_tolerance = vals_within_tolerance(new_config.lengths, end.lengths, primitive_step)
     return interpolated_path
 
+def search_steps_violations(spec, steps):
+    num_steps = len(steps)
+    primitive_step = spec.PRIMITIVE_STEP
+    violations = []
+    for i in range(num_steps - 1):
+        step1 = steps[i]
+        step2 = steps[i+1]
+        is_angles_in_tolerance = vals_within_tolerance(step1.ee1_angles, step2.ee1_angles, primitive_step)
+        is_lengths_in_tolerance = vals_within_tolerance(step1.lengths, step2.lengths, primitive_step)
+        if test_config_distance(step1, step2, spec) is False:
+            violations.append((step1, step2))
+    
+    return violations
 
 def main(arglist):
     input_file = arglist[0]
@@ -281,6 +329,7 @@ def main(arglist):
 
     isPathFound = False
     while isPathFound is False:
+        # print("its false!")
         n = 0
         while n < 5000:
             # for debugging
@@ -294,7 +343,7 @@ def main(arglist):
                 # if some distance condition is satisfied, based on config, add neighbours to newnode
                 for node in graph_nodes:
                     node_angles, new_node_angles, node_lengths, new_node_lengths = node.config.ee1_angles, new_node.config.ee1_angles, node.config.lengths, new_node.config.lengths
-                    if is_angles_close(node_angles, new_node_angles) and is_lengths_close(node_lengths, new_node_lengths):
+                    if is_connect_angles(node_angles, new_node_angles) and is_connect_lengths(node_lengths, new_node_lengths):
                         GraphNode.add_connection(node, new_node)
                 graph_nodes.append(new_node)
                 n += 1
@@ -312,8 +361,13 @@ def main(arglist):
         interpolated_path.append(steps[-1])
         steps = interpolated_path
 
-        # Then, wherever collisions exist, linearly call  
-
+        # Then, wherever collisions exist, recursively construct a new graph in violation space until no violations
+        # We'll set a limit to recursive depth in case an impossible path has been chosen.
+        num_steps = len(steps)
+        violations = search_steps_violations(spec, steps)
+        if len(violations) > 0:
+            print(len(violations))
+            
 
     if len(arglist) > 1:
         write_robot_config_list_to_file(output_file, steps)
