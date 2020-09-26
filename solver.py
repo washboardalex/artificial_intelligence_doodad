@@ -228,7 +228,10 @@ def generate_new_vals(current, goal, tolerance):
     num_els = len(current)
     new_vals = []
     for i in range(num_els):
-        if current[i] - goal[i] > tolerance or current[i] - goal[i] < -tolerance:
+        difference = current[i] - goal[i]
+        if difference > tolerance:
+            new_vals.append(current[i] - tolerance)
+        elif difference < -tolerance:
             new_vals.append(current[i] + tolerance)
         else:
             new_vals.append(current[i])
@@ -237,21 +240,26 @@ def generate_new_vals(current, goal, tolerance):
 #might refactor this into recursive pathfind or somesuch
 # needs collision checking
 def interpolate_path(spec, start, end): 
-    primitive_step = 1e-3 #remove this once you update the spec to original value
+    primitive_step = spec.PRIMITIVE_STEP #remove this once you update the spec to original value
     interpolated_path = [start]
     
     #designate an index
     is_angles_in_tolerance = vals_within_tolerance(start.ee1_angles, end.ee1_angles, primitive_step)
     is_lengths_in_tolerance = vals_within_tolerance(start.lengths, end.lengths, primitive_step)
     
+    # index = 0
     while not is_angles_in_tolerance or not is_lengths_in_tolerance:
+        # index += 1
+        # if index % 290 == 0:
+        #     print("interpolating...index: ", index)
         new_angles = generate_new_vals(interpolated_path[-1].ee1_angles, end.ee1_angles, primitive_step)
         new_lengths = generate_new_vals(interpolated_path[-1].lengths, end.lengths, primitive_step)
         new_config = make_robot_config_from_ee1(spec.grapple_points[0][0], spec.grapple_points[0][1], new_angles, new_lengths, ee1_grappled = True)
+        if is_step_collision(spec, new_config):
+            return []
         interpolated_path.append(new_config)
         is_angles_in_tolerance = vals_within_tolerance(new_config.ee1_angles, end.ee1_angles, primitive_step)
         is_lengths_in_tolerance = vals_within_tolerance(new_config.lengths, end.lengths, primitive_step)
-        break
     return interpolated_path
 
 
@@ -267,9 +275,7 @@ def main(arglist):
 
     steps = []
 
-    #
     # Solution
-    #
 
     # Check if the beginning and ending lengths are the same. If they are, then do one algorithm, if not do another thing
 
@@ -277,6 +283,9 @@ def main(arglist):
     while isPathFound is False:
         n = 0
         while n < 5000:
+            # for debugging
+            # if n % 290 == 0:
+            #     print("working...index: ", n)
             config = generate_sample(spec)
             # check if the configuration is a collision
             # if not then append.
@@ -294,19 +303,17 @@ def main(arglist):
             isPathFound = True
             steps = path
 
-        # need a for loop here - interpolate path at each step
-        # then youll need to add some collision checking
         num_steps = len(steps)
         interpolated_path = []
         for i in range(num_steps - 1):
             new_path_segment = interpolate_path(spec, steps[i], steps[i+1])
-            #if array empty is path found is false
+            # if new_path_segment == []:
+            #     print("Collision!")
+                #need to deal with this
             interpolated_path.extend(new_path_segment)
         interpolated_path.append(steps[-1])
         steps = interpolated_path
-        # call provided graph search function (can improve later) - if you get a solution....
-        #interpolate path
-        #AND DATS DAT!
+
 
     if len(arglist) > 1:
         write_robot_config_list_to_file(output_file, steps)

@@ -19,8 +19,8 @@ class ProblemSpec:
     # TOLERANCE = 0.1
     
     # max primitive step size
-    # PRIMITIVE_STEP = 1e-3
-    PRIMITIVE_STEP = 1
+    PRIMITIVE_STEP = 1e-3
+    # PRIMITIVE_STEP = 1
 
     def __init__(self, input_file):
         # parse input file
