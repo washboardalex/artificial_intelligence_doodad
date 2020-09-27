@@ -38,7 +38,6 @@ class RobotConfig:
             self.points = points
             self.edges = [(self.points[i], self.points[i + 1]) for i in range((len(lengths)))]
 
-
         elif ee2x is not None and ee2y is not None and ee2_angles is not None:
             points = [(ee2x, ee2y)]
             net_angle = Angle(radians=0)

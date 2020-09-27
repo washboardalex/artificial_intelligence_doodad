@@ -4,7 +4,7 @@ import numpy as np
 from visualiser import Visualiser
 from angle import Angle
 from problem_spec import ProblemSpec
-from robot_config import make_robot_config_from_ee1, write_robot_config_list_to_file
+from robot_config import make_robot_config_from_ee1, make_robot_config_from_ee2, write_robot_config_list_to_file
 from tester import test_config_equality
 
 """
@@ -120,20 +120,24 @@ def generate_lengths(min_lengths, max_lengths):
 def generate_sample(spec):
     """
     Generates a sample robot config taking a problem spec as input.
-
-    At this time only one grapple point is supported.
     """
-    new_x = random.random()
-    new_y = random.random()
+
     new_angles = generate_angles(spec.num_segments) # num_segments == num_angles 
     new_lengths = generate_lengths(spec.min_lengths, spec.max_lengths)
     
     # for now only implementing grapple points == 1
     if spec.num_grapple_points == 1:
+        #possible bug if EE2 is the one grappled
         robot_config = make_robot_config_from_ee1(spec.grapple_points[0][0], spec.grapple_points[0][1], new_angles, new_lengths)
     else:
-        robot_config = make_robot_config_from_ee1(new_x, new_y, new_angles, new_lengths)
-
+        is_ee1_grappled = bool(random.getrandbits(1))
+        sample_grapple_point_index = random.randrange(0, len(spec.grapple_points))
+        new_x = spec.grapple_points[sample_grapple_point_index][0]
+        new_y = spec.grapple_points[sample_grapple_point_index][1]
+        if is_ee1_grappled:
+            robot_config = make_robot_config_from_ee1(new_x, new_y, new_angles, new_lengths, ee1_grappled=is_ee1_grappled, ee2_grappled= not is_ee1_grappled)
+        else:   
+            robot_config = make_robot_config_from_ee2(new_x, new_y, new_angles, new_lengths, ee1_grappled=is_ee1_grappled, ee2_grappled= not is_ee1_grappled)
     
     return robot_config
 
@@ -279,11 +283,9 @@ def interpolate_path(spec, start, end):
     interpolated_path = [start]
     
     #designate an index
-    is_angles_in_tolerance = vals_within_tolerance(start.ee1_angles, end.ee1_angles, primitive_step)
-    is_lengths_in_tolerance = vals_within_tolerance(start.lengths, end.lengths, primitive_step)
-    
+    is_in_tolerance = test_config_distance(start, end, spec)
     # index = 0
-    while not is_angles_in_tolerance or not is_lengths_in_tolerance:
+    while not is_in_tolerance:
         # index += 1
         # if index % 290 == 0:
         #     print("interpolating...index: ", index)
@@ -293,8 +295,7 @@ def interpolate_path(spec, start, end):
         if is_step_collision(spec, new_config):
             return []
         interpolated_path.append(new_config)
-        is_angles_in_tolerance = vals_within_tolerance(new_config.ee1_angles, end.ee1_angles, primitive_step)
-        is_lengths_in_tolerance = vals_within_tolerance(new_config.lengths, end.lengths, primitive_step)
+        is_in_tolerance = test_config_distance(new_config, end, spec)
     return interpolated_path
 
 def search_steps_violations(spec, steps):
@@ -304,8 +305,6 @@ def search_steps_violations(spec, steps):
     for i in range(num_steps - 1):
         step1 = steps[i]
         step2 = steps[i+1]
-        is_angles_in_tolerance = vals_within_tolerance(step1.ee1_angles, step2.ee1_angles, primitive_step)
-        is_lengths_in_tolerance = vals_within_tolerance(step1.lengths, step2.lengths, primitive_step)
         if test_config_distance(step1, step2, spec) is False:
             violations.append((step1, step2))
     
@@ -331,10 +330,12 @@ def main(arglist):
     while isPathFound is False:
         # print("its false!")
         n = 0
-        while n < 5000:
+        sample_size = 5000 # + ((spec.num_grapple_points - 1) * 1000)
+        print("sample size: ", sample_size)
+        while n < sample_size:
             # for debugging
-            # if n % 290 == 0:
-            #     print("working...index: ", n)
+            if n % 290 == 0:
+                print("working...index: ", n)
             config = generate_sample(spec)
             # check if the configuration is a collision
             # if not then append.
@@ -351,6 +352,9 @@ def main(arglist):
         if path is not None:
             isPathFound = True
             steps = path
+            steps.append(spec.goal)
+        else:
+            continue
 
         # First, do a round of simple linear interpolation in C-Space
         num_steps = len(steps)
@@ -363,10 +367,16 @@ def main(arglist):
 
         # Then, wherever collisions exist, recursively construct a new graph in violation space until no violations
         # We'll set a limit to recursive depth in case an impossible path has been chosen.
+        # Currently simply resamples the whole graph which is wasteful of resources
         num_steps = len(steps)
         violations = search_steps_violations(spec, steps)
         if len(violations) > 0:
+            print("There are some violations")
             print(len(violations))
+            print("The violations are : ")
+            for violation in violations:
+                for config in violation:
+                    print(config.points)
             
 
     if len(arglist) > 1:
