@@ -55,7 +55,6 @@ class RobotConfig:
             self.points = points
             self.edges = [(self.points[i], self.points[i + 1]) for i in range((len(lengths)))]
             
-
         else:
             raise Exception("Could not create RobotConfig - Insufficient information given")
 
